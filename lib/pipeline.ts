@@ -37,5 +37,29 @@ export async function runPipeline(
     deAiPrompt(draft, input.styleSample),
   );
 
-  return { profile, requirements, email };
+  // Hard guarantee: the email must never contain dash punctuation, regardless
+  // of whether the model followed the prompt rule. This is belt-and-suspenders.
+  const sanitized: FinalEmail = {
+    ...email,
+    subject: stripDashes(email.subject),
+    body: stripDashes(email.body),
+  };
+
+  return { profile, requirements, email: sanitized };
+}
+
+/**
+ * Remove every dash-as-punctuation character (em dash, en dash, horizontal bar,
+ * figure dash, minus sign) and turn it into a comma break. Ordinary hyphens
+ * (U+002D) inside compound words like "full-stack" are intentionally kept.
+ */
+function stripDashes(text: string): string {
+  return text
+    .replace(/\s*[—–―‒−]\s*/g, ", ") // dash → comma break
+    .replace(/\s+,/g, ",") // " ," → ","
+    .replace(/,\s*,/g, ", ") // ",," → ", "
+    .replace(/,(\s*[.!?;:])/g, "$1") // ", ." → "."
+    .replace(/[ \t]{2,}/g, " ") // collapse runs of spaces
+    .replace(/ +\n/g, "\n") // trailing spaces before newline
+    .trim();
 }

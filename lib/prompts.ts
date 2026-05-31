@@ -90,8 +90,11 @@ interface FinalEmail {
 Eliminate these AI tells:
 - Hollow openers ("I hope this email finds you well", "I am excited to...").
 - Overused connectives ("moreover", "furthermore", "leverage", "delve", "robust", "passionate").
-- Symmetrical, listy sentence structure and em-dash overuse.
+- Symmetrical, listy sentence structure.
 - Vague enthusiasm with no specifics.
+
+HARD RULE — no dash punctuation: the subject and body must NOT contain any em dash (—), en dash (–), or any other dash used as punctuation. Do not use a dash to join clauses or set off an aside. Rewrite into separate sentences or use a comma instead. (Ordinary hyphens inside compound words like "full-stack" are fine.)
+
 Preserve the facts and the call to action. Make it tighter and more natural.${styleBlock}`,
     user: `Email to rewrite:\n${JSON.stringify(draft, null, 2)}`,
   };
