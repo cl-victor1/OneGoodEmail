@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { GenerateResponse } from "@/types";
+import type { GenerateResponse, RecipientResult } from "@/types";
 import { ResultEditor } from "@/components/ResultEditor";
+import { RecipientFinder } from "@/components/RecipientFinder";
 
 export function EmailGenerator() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResponse | null>(null);
+  const [recipient, setRecipient] = useState<RecipientResult | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,6 +32,8 @@ export function EmailGenerator() {
 
   return (
     <div className="space-y-10">
+      <RecipientFinder onResult={setRecipient} />
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <Field label="Resume" hint="PDF, DOCX, or TXT">
           <input
@@ -78,7 +82,7 @@ export function EmailGenerator() {
         </p>
       )}
 
-      {result && <ResultEditor result={result} />}
+      {result && <ResultEditor result={result} recipient={recipient} />}
     </div>
   );
 }

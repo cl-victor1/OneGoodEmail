@@ -1,16 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import type { GenerateResponse } from "@/types";
+import type { GenerateResponse, RecipientResult } from "@/types";
 
-export function ResultEditor({ result }: { result: GenerateResponse }) {
+export function ResultEditor({
+  result,
+  recipient,
+}: {
+  result: GenerateResponse;
+  recipient?: RecipientResult | null;
+}) {
   const { email, profile, requirements } = result;
+  const to = recipient?.email || "";
   const [subject, setSubject] = useState(email.subject);
   const [body, setBody] = useState(email.body);
   const [copied, setCopied] = useState(false);
 
   async function copy() {
-    await navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`);
+    const header = to ? `To: ${to}\n` : "";
+    await navigator.clipboard.writeText(`${header}Subject: ${subject}\n\n${body}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -26,6 +34,17 @@ export function ResultEditor({ result }: { result: GenerateResponse }) {
           {copied ? "Copied ✓" : "Copy"}
         </button>
       </div>
+
+      {to && (
+        <label className="block space-y-2">
+          <span className="text-sm font-medium">To</span>
+          <input
+            value={to}
+            readOnly
+            className="w-full rounded-md border border-neutral-800 bg-neutral-950 p-3 font-mono text-sm text-neutral-300 outline-none"
+          />
+        </label>
+      )}
 
       <label className="block space-y-2">
         <span className="text-sm font-medium">Subject</span>

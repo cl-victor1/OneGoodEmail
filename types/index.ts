@@ -46,3 +46,38 @@ export interface PipelineInput {
   jobDescription: string;
   styleSample?: string; // optional pasted email used as a writing-style reference
 }
+
+// ─── Recipient lookup (company → founder email) ──────────────────────────────
+
+/**
+ * Confidence in the recipient address:
+ *  - "verified": Hunter confirmed it
+ *  - "likely":   Hunter found it but low score / catch-all domain — confirm first
+ *  - "guess":    synthesized from name + domain, or no address at all
+ */
+export type RecipientConfidence = "verified" | "likely" | "guess";
+
+/** Inputs to the recipient-finder. At least one of company/url should be set. */
+export interface FindRecipientInput {
+  company?: string; // e.g. "Acme AI"
+  url?: string; // pasted official site or JD link (preferred — domain is free)
+  founderName?: string; // optional user-supplied "Jane Doe"
+}
+
+/** Founder/CEO identified for the company. */
+export interface Founder {
+  firstName: string;
+  lastName: string;
+  title: string | null;
+}
+
+/** Result of the company → founder email lookup. Never an error — see `note`. */
+export interface RecipientResult {
+  email: string; // best address we have, even if guessed; "" when none
+  confidence: RecipientConfidence;
+  founder: Founder | null;
+  domain: string;
+  hunterScore: number | null; // null when Hunter wasn't consulted / missed
+  sources: string[]; // URLs the web_search step cited
+  note: string; // human-facing guidance (e.g. "verify before sending")
+}

@@ -7,6 +7,48 @@ import type {
   ResumeProfile,
 } from "@/types";
 
+// ─── Recipient lookup (company → founder), uses the web_search tool ──────────
+
+// Find the company's primary domain and its founder/CEO via web search.
+// When a url is supplied, the domain is derived in JS upstream and passed in as
+// `knownDomain` so the model only has to find the person.
+export function findDomainAndFounderPrompt(input: {
+  company?: string;
+  knownDomain?: string;
+  knownFounderName?: string;
+}) {
+  const facts = [
+    input.company ? `Company name: ${input.company}` : null,
+    input.knownDomain ? `Known domain (use this, do not change it): ${input.knownDomain}` : null,
+    input.knownFounderName ? `User says the founder is: ${input.knownFounderName} (verify the spelling and title)` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    system: `You research a company and find (1) its primary website domain and (2) its founder, co-founder, or CEO. Use web search. Prefer the company's official site for the domain, and people with founder/co-founder/CEO titles for the person.
+
+Return ONLY valid JSON matching this TypeScript type, no prose, no markdown fences:
+
+interface Result {
+  domain: string;                 // bare domain, e.g. "acme.ai" — no scheme, no www, no path
+  founder: {
+    firstName: string;
+    lastName: string;
+    title: string | null;         // e.g. "Co-founder & CEO"
+  } | null;                       // null if no founder/CEO can be confidently identified
+  confidence: "high" | "medium" | "low";
+  sources: string[];              // URLs you relied on
+}
+
+Rules:
+- If a known domain is provided, return it verbatim and do not search for a different one.
+- Normalize the domain to its bare form (strip https://, www., and any path).
+- Only name a founder you actually found evidence for. If unsure, set founder to null and confidence to "low" rather than guessing a name.`,
+    user: `Find the domain and founder/CEO for this company.\n\n${facts}`,
+  };
+}
+
 // ① Extract structured info from the raw resume text.
 export function extractResumePrompt(resumeText: string) {
   return {
