@@ -97,6 +97,11 @@ export function RecipientFinder({
             <span className={`rounded-full border px-2.5 py-0.5 text-xs ${BADGE[result.confidence].className}`}>
               {BADGE[result.confidence].label}
             </span>
+            {result.usedHunter && (
+              <span className="rounded-full border border-neutral-700 px-2.5 py-0.5 text-xs text-neutral-400">
+                via Hunter
+              </span>
+            )}
           </div>
 
           {result.email ? (

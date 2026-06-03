@@ -51,6 +51,7 @@ export async function findRecipient(
       confidence: "verified",
       founder,
       domain: domain || normalizeDomain(foundEmail.split("@")[1] ?? ""),
+      usedHunter: false,
       sources,
       note: "Found published in public sources.",
     };
@@ -63,6 +64,7 @@ export async function findRecipient(
       confidence: "guess",
       founder,
       domain,
+      usedHunter: false,
       sources,
       note: domain
         ? `Couldn't pin down the founder for ${domain}. Check the company's team or contact page.`
@@ -87,6 +89,7 @@ export async function findRecipient(
       confidence: verified ? "verified" : "likely",
       founder,
       domain,
+      usedHunter: true, // lookup returned an address → quota was consumed
       sources,
       note: verified
         ? "Verified deliverable."
@@ -100,6 +103,7 @@ export async function findRecipient(
     confidence: "guess",
     founder,
     domain,
+    usedHunter: false, // the lookup ran but returned nothing → no quota consumed
     sources,
     note: "Suggested format (firstname@domain). Verify on the company's contact page or the founder's X / LinkedIn before sending.",
   };

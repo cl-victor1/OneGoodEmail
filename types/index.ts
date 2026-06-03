@@ -77,6 +77,7 @@ export interface RecipientResult {
   confidence: RecipientConfidence;
   founder: Founder | null;
   domain: string;
+  usedHunter: boolean; // true only when the email-finder API returned an address (i.e. quota was consumed)
   sources: string[]; // URLs the web_search step cited
   note: string; // human-facing guidance (e.g. "verify before sending")
 }
