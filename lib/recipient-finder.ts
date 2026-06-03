@@ -1,7 +1,9 @@
 // Orchestrates the company → founder email lookup:
-//   ①+② one web_search call → { domain, founder, sources }
-//   ③ Hunter email-finder → verified address + score
-//   ④ tier the result by confidence; degrade to guidance, never throw.
+//   ①+② one web_search call → { domain, founder, email?, sources }
+//   ③ if web search already surfaced a published email, trust it and stop here —
+//      the email-lookup API below is only a fallback, to save its quota.
+//   ④ otherwise run the email-finder to discover/verify the address.
+//   ⑤ tier the result by confidence; degrade to guidance, never throw.
 
 import { completeJSONWithSearch } from "@/lib/llm";
 import { findDomainAndFounderPrompt } from "@/lib/prompts";
@@ -15,6 +17,7 @@ import type {
 interface DomainFounderResult {
   domain: string;
   founder: Founder | null;
+  email: string | null; // a published address the search found, if any
   confidence: "high" | "medium" | "low";
   sources: string[];
 }
@@ -38,15 +41,28 @@ export async function findRecipient(
   const domain = knownDomain ?? normalizeDomain(research.domain);
   const founder = research.founder;
   const sources = research.sources ?? [];
+  const foundEmail = research.email?.trim();
 
-  // ④ No founder → degrade to guidance.
+  // ③ Web search already surfaced a published address → trust it and stop.
+  // This is the common case and costs nothing beyond the search we already ran.
+  if (foundEmail) {
+    return {
+      email: foundEmail,
+      confidence: "verified",
+      founder,
+      domain: domain || normalizeDomain(foundEmail.split("@")[1] ?? ""),
+      sources,
+      note: "Found published in public sources.",
+    };
+  }
+
+  // No founder → can't even attempt a lookup; degrade to guidance.
   if (!founder || !domain) {
     return {
       email: "",
       confidence: "guess",
       founder,
       domain,
-      hunterScore: null,
       sources,
       note: domain
         ? `Couldn't pin down the founder for ${domain}. Check the company's team or contact page.`
@@ -54,38 +70,36 @@ export async function findRecipient(
     };
   }
 
-  // ③ Verify / discover the address with Hunter.
-  const hunter = await findEmail({
+  // ④ Fallback only: no published email was found, so discover/verify one.
+  const lookup = await findEmail({
     domain,
     firstName: founder.firstName,
     lastName: founder.lastName,
   });
 
-  // ④ Tier by Hunter outcome.
-  if (hunter) {
+  // ⑤ Tier by the lookup outcome.
+  if (lookup) {
     const verified =
-      hunter.verificationStatus === "valid" ||
-      (hunter.score !== null && hunter.score >= 80);
+      lookup.verificationStatus === "valid" ||
+      (lookup.score !== null && lookup.score >= 80);
     return {
-      email: hunter.email,
+      email: lookup.email,
       confidence: verified ? "verified" : "likely",
       founder,
       domain,
-      hunterScore: hunter.score,
       sources,
       note: verified
-        ? "Verified by Hunter."
-        : "Best guess from Hunter. Confirm before sending.",
+        ? "Verified deliverable."
+        : "Best guess. Confirm before sending.",
     };
   }
 
-  // Hunter missed / no key / quota → synthesize the most common format.
+  // Nothing found → synthesize the most common format.
   return {
     email: `${founder.firstName.toLowerCase()}@${domain}`,
     confidence: "guess",
     founder,
     domain,
-    hunterScore: null,
     sources,
     note: "Suggested format (firstname@domain). Verify on the company's contact page or the founder's X / LinkedIn before sending.",
   };

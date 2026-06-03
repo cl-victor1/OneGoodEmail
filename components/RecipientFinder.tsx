@@ -97,9 +97,6 @@ export function RecipientFinder({
             <span className={`rounded-full border px-2.5 py-0.5 text-xs ${BADGE[result.confidence].className}`}>
               {BADGE[result.confidence].label}
             </span>
-            {result.hunterScore !== null && (
-              <span className="text-xs text-neutral-500">Hunter score {result.hunterScore}</span>
-            )}
           </div>
 
           {result.email ? (

@@ -36,6 +36,11 @@ const domainFounderSchema = {
       description:
         "The founder/co-founder/CEO, or null if none can be confidently identified.",
     },
+    email: {
+      type: ["string", "null"],
+      description:
+        "The founder's or a direct contact email ONLY if you saw it explicitly published on a credible page (the company's team/contact page, the founder's public profile, a press page, etc.). Do NOT construct or guess an address from the person's name and domain — return null unless you found the literal address. null if not found.",
+    },
     confidence: { type: "string", enum: ["high", "medium", "low"] },
     sources: {
       type: "array",
@@ -43,12 +48,14 @@ const domainFounderSchema = {
       description: "URLs you relied on.",
     },
   },
-  required: ["domain", "founder", "confidence", "sources"],
+  required: ["domain", "founder", "email", "confidence", "sources"],
 } satisfies OutputSchema;
 
-// Find the company's primary domain and its founder/CEO via web search.
+// Find the company's primary domain, its founder/CEO, and — when one is publicly
+// published — a direct contact email, all in one web_search call. A found email
+// lets the orchestrator skip the paid email-lookup fallback entirely.
 // When a url is supplied, the domain is derived in JS upstream and passed in as
-// `knownDomain` so the model only has to find the person.
+// `knownDomain` so the model only has to find the person and email.
 export function findDomainAndFounderPrompt(input: {
   company?: string;
   knownDomain?: string;
@@ -63,12 +70,14 @@ export function findDomainAndFounderPrompt(input: {
     .join("\n");
 
   return {
-    system: `You research a company and find (1) its primary website domain and (2) its founder, co-founder, or CEO. Use web search. Prefer the company's official site for the domain, and people with founder/co-founder/CEO titles for the person.
+    system: `You research a company and find (1) its primary website domain, (2) its founder, co-founder, or CEO, and (3) a direct contact email IF one is publicly published. Use web search. Prefer the company's official site for the domain, and people with founder/co-founder/CEO titles for the person.
 
 Rules:
 - If a known domain is provided, return it verbatim and do not search for a different one.
 - Normalize the domain to its bare form (strip https://, www., and any path).
-- Only name a founder you actually found evidence for. If unsure, set founder to null and confidence to "low" rather than guessing a name.`,
+- Only name a founder you actually found evidence for. If unsure, set founder to null and confidence to "low" rather than guessing a name.
+- For email: return an address ONLY if you saw the literal address published on a credible page (team/contact page, the founder's public profile, a press kit, etc.). NEVER fabricate or construct one from the name and domain. If you didn't find a real published address, set email to null.
+- Include every page you relied on in sources — especially the page the email came from.`,
     user: `Find the domain and founder/CEO for this company.\n\n${facts}`,
     schema: domainFounderSchema,
   };

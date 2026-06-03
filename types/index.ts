@@ -51,8 +51,8 @@ export interface PipelineInput {
 
 /**
  * Confidence in the recipient address:
- *  - "verified": Hunter confirmed it
- *  - "likely":   Hunter found it but low score / catch-all domain — confirm first
+ *  - "verified": found published in public sources, or confirmed deliverable by the lookup
+ *  - "likely":   the lookup found it but with a low score / catch-all domain — confirm first
  *  - "guess":    synthesized from name + domain, or no address at all
  */
 export type RecipientConfidence = "verified" | "likely" | "guess";
@@ -77,7 +77,6 @@ export interface RecipientResult {
   confidence: RecipientConfidence;
   founder: Founder | null;
   domain: string;
-  hunterScore: number | null; // null when Hunter wasn't consulted / missed
   sources: string[]; // URLs the web_search step cited
   note: string; // human-facing guidance (e.g. "verify before sending")
 }
