@@ -1,6 +1,13 @@
 # OneGoodEmail
 
-Upload a resume + paste a job description → get one good, human-sounding outreach email.
+Find the right person at a company and write them one good, human-sounding outreach email — résumé in, recipient and draft out.
+
+## Features
+
+- **Recipient lookup** — type a company name (or paste its site / job-posting URL) and get the founder/CEO's email. Anthropic `web_search` resolves the domain + person in one call; [Hunter](https://hunter.io) verifies the address.
+- **Confidence tiers** — every result is labelled **✓ verified**, **⚠ likely (confirm first)**, or **💡 suggested (verify)**. A miss never errors; it degrades to a `firstname@domain` suggestion plus guidance.
+- **Email drafting** — upload a résumé + paste the JD (+ optional writing-style sample) to get a tailored draft that's edited to strip AI tells and dash punctuation.
+- **Stateless by design** — nothing is written to a database; lookups are single, assisted, 1:1.
 
 ## Architecture
 
