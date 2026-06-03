@@ -4,7 +4,7 @@ import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 // Email-writing model — the resume→email drafting + rewrite steps. Sonnet 4.6:
 // strong writing quality at lower latency/cost than Opus. This is the default
 // "current model" for the prompt chain.
-export const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
+export const MODEL = process.env.ANTHROPIC_WRITING_MODEL ?? "claude-sonnet-4-6";
 
 // Recipient-finding model — the company → founder/email web-search step. This
 // research task benefits from Opus's stronger reasoning over search results, so

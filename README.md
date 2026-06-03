@@ -55,7 +55,10 @@ Next.js (App Router, deploy on Vercel)
 
 ## Model
 
-Uses **Claude Sonnet 4.6** (`claude-sonnet-4-6`) for every chain step. Override with `ANTHROPIC_MODEL`.
+Two models, set independently:
+
+- **Email writing** (resume → draft → rewrite) uses **Claude Sonnet 4.6** (`claude-sonnet-4-6`). Override with `ANTHROPIC_WRITING_MODEL`.
+- **Recipient finding** (company → founder/email web search) uses **Claude Opus 4.8** (`claude-opus-4-8`) for stronger research reasoning. Override with `ANTHROPIC_RECIPIENT_MODEL`.
 
 ## Setup
 
