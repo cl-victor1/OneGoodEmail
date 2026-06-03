@@ -1,9 +1,16 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 
-// Default model for the whole prompt chain. Sonnet 4.6 — strong writing quality
-// at lower latency/cost than Opus, well suited for the drafting + rewrite steps.
+// Email-writing model — the resume→email drafting + rewrite steps. Sonnet 4.6:
+// strong writing quality at lower latency/cost than Opus. This is the default
+// "current model" for the prompt chain.
 export const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
+
+// Recipient-finding model — the company → founder/email web-search step. This
+// research task benefits from Opus's stronger reasoning over search results, so
+// it defaults to Opus 4.8 independently of the email-writing model above.
+export const RECIPIENT_MODEL =
+  process.env.ANTHROPIC_RECIPIENT_MODEL ?? "claude-opus-4-8";
 
 let client: Anthropic | null = null;
 
@@ -69,7 +76,7 @@ export async function completeJSONWithSearch<T>(opts: {
   maxTokens?: number;
 }): Promise<T> {
   const message = await getClient().messages.parse({
-    model: MODEL,
+    model: RECIPIENT_MODEL,
     max_tokens: opts.maxTokens ?? 2048,
     system: [
       { type: "text", text: opts.system, cache_control: { type: "ephemeral" } },
