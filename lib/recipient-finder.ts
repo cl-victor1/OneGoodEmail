@@ -26,13 +26,14 @@ export async function findRecipient(
   const knownDomain = input.url ? normalizeDomain(input.url) : undefined;
 
   // ①+② Resolve domain (if not already known) and the founder via web search.
-  const research = await completeJSONWithSearch<DomainFounderResult>(
-    findDomainAndFounderPrompt({
+  const research = await completeJSONWithSearch<DomainFounderResult>({
+    ...findDomainAndFounderPrompt({
       company: input.company,
       knownDomain,
       knownFounderName: input.founderName,
     }),
-  );
+    maxTokens: 4096,
+  });
 
   const domain = knownDomain ?? normalizeDomain(research.domain);
   const founder = research.founder;

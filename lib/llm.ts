@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 
 // Default model for the whole prompt chain. Sonnet 4.6 — strong writing quality
 // at lower latency/cost than Opus, well suited for the drafting + rewrite steps.
@@ -18,43 +19,56 @@ function getClient(): Anthropic {
 }
 
 /**
- * Run a single prompt-chain step. Returns the model's text output.
+ * A JSON Schema describing an object output. Passed to Anthropic's structured
+ * outputs feature so the model is constrained to emit schema-valid JSON — no
+ * prose, no fences, no truncated-mid-thought failures to parse around.
+ */
+export type OutputSchema = Parameters<typeof jsonSchemaOutputFormat>[0];
+
+/**
+ * Run a prompt-chain step that must return JSON, using Anthropic's native
+ * structured outputs (`output_config.format`). The response is parsed and
+ * validated against `schema` by the SDK and returned via `parsed_output`.
  *
  * `system` is cached (ephemeral) so repeated chain steps in one request reuse
  * the cached system prompt and only pay for the changing user content.
  */
-export async function complete(opts: {
+export async function completeJSON<T>(opts: {
   system: string;
   user: string;
+  schema: OutputSchema;
   maxTokens?: number;
-}): Promise<string> {
-  const message = await getClient().messages.create({
+}): Promise<T> {
+  const message = await getClient().messages.parse({
     model: MODEL,
     max_tokens: opts.maxTokens ?? 2048,
     system: [
       { type: "text", text: opts.system, cache_control: { type: "ephemeral" } },
     ],
     messages: [{ role: "user", content: opts.user }],
+    output_config: { format: jsonSchemaOutputFormat(opts.schema) },
   });
 
-  return textOf(message);
+  return parsedOf<T>(message);
 }
 
 /**
- * Run a prompt-chain step with the server-side web search tool enabled. Anthropic
- * executes the searches and resolves the tool loop inside this single request,
- * so the returned text is the model's final answer (same shape as `complete`).
+ * Like `completeJSON`, but with the server-side web search tool enabled.
+ * Structured outputs compose with web_search: Anthropic runs the searches and
+ * still returns a guaranteed schema-valid object, so the model can no longer
+ * narrate prose in place of the JSON answer.
  *
  * `maxUses` bounds how many searches the model may issue — important for both
  * latency (each search is a round trip) and cost (~$10 / 1k searches).
  */
-export async function completeWithSearch(opts: {
+export async function completeJSONWithSearch<T>(opts: {
   system: string;
   user: string;
+  schema: OutputSchema;
   maxUses?: number;
   maxTokens?: number;
-}): Promise<string> {
-  const message = await getClient().messages.create({
+}): Promise<T> {
+  const message = await getClient().messages.parse({
     model: MODEL,
     max_tokens: opts.maxTokens ?? 2048,
     system: [
@@ -68,52 +82,18 @@ export async function completeWithSearch(opts: {
       },
     ],
     messages: [{ role: "user", content: opts.user }],
+    output_config: { format: jsonSchemaOutputFormat(opts.schema) },
   });
 
-  return textOf(message);
+  return parsedOf<T>(message);
 }
 
-/** Concatenate and trim the text blocks of a message, dropping tool-use blocks. */
-function textOf(message: Anthropic.Message): string {
-  return message.content
-    .filter((block): block is Anthropic.TextBlock => block.type === "text")
-    .map((block) => block.text)
-    .join("")
-    .trim();
-}
-
-/**
- * Strip ```json fences the model sometimes adds, then parse. Throws on invalid
- * JSON so the caller can surface a clear error.
- */
-function parseModelJSON<T>(raw: string): T {
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-
-  try {
-    return JSON.parse(cleaned) as T;
-  } catch {
-    throw new Error(`Model did not return valid JSON:\n${raw.slice(0, 500)}`);
+/** Pull the validated structured output off a parsed message, or throw. */
+function parsedOf<T>(message: { parsed_output: unknown }): T {
+  if (message.parsed_output == null) {
+    throw new Error(
+      "Model returned no structured output. It may have stopped on max_tokens before completing the object — try a higher maxTokens.",
+    );
   }
-}
-
-/** Convenience wrapper for steps that must return JSON. */
-export async function completeJSON<T>(opts: {
-  system: string;
-  user: string;
-  maxTokens?: number;
-}): Promise<T> {
-  return parseModelJSON<T>(await complete(opts));
-}
-
-/** Like `completeJSON`, but with the web search tool enabled. */
-export async function completeJSONWithSearch<T>(opts: {
-  system: string;
-  user: string;
-  maxUses?: number;
-  maxTokens?: number;
-}): Promise<T> {
-  return parseModelJSON<T>(await completeWithSearch(opts));
+  return message.parsed_output as T;
 }
